@@ -10,24 +10,26 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy nginx to EC2
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Copy index.html to EC2
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "index.html"
+          target: "/home/ec2-user"
+
+      - name: Move file into place and restart nginx
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-
-            sudo tee /var/www/html/index.html > /dev/null <<'EOF'
-            <!DOCTYPE html>
-            <html>
-              <head><title>Hello World</title></head>
-              <body>
-                <h1>Hello World from EC2!</h1>
-                <p>Deployed via GitHub Actions.</p>
-              </body>
-            </html>
-            EOF
-
+            set -e
+            sudo mv /home/ec2-user/index.html /usr/share/nginx/html/index.html
             sudo systemctl enable nginx
             sudo systemctl start nginx
